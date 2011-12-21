@@ -206,5 +206,5 @@ class PingdomConnection(object):
         
     def get_actions(self, limit):
         """Get a list of Pingdom actions/alerts"""
-        response = PingdomRequest(self, 'actions/?limit=%s' % limit)
+        response = PingdomRequest(self, 'actions/?limit=%s' % limit).fetch()
         return response.content
