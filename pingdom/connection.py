@@ -160,6 +160,18 @@ class PingdomConnection(object):
         response = PingdomRequest(self, 'results/%s?limit=%s' %(check_id,limit)).fetch()
         return response.content['results']
 
+    def get_servertime(self):
+        #http://www.pingdom.com/services/api-documentation-rest
+        """Get server time"""
+        response = PingdomRequest(self, 'servertime').fetch()
+        return response.content['servertime']
+
+    def get_summary_average(self, check_id):
+        """Get summary average"""
+        response = PingdomRequest(self, 'summary.average/%s' % check_id).fetch()
+        return response.content['summary']
+        #or return response.content['status']
+
     def create_check(self, name, host, check_type, **kwargs):
         """Create a Pingdom check"""
         post_data = {'name': name,
