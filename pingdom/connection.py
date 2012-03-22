@@ -134,9 +134,11 @@ class PingdomConnection(object):
         return check_list
         
         
-    def get_all_checks(self, check_names=None):
+    def get_all_checks(self, check_names=None, **kwargs):
         """Get a list of Pingdom checks, optionally filtered by check name"""
-        response = PingdomRequest(self, 'checks').fetch()
+        limit = int(kwargs.get("limit", 25000))
+        offset = int(kwargs.get("offset", 0))
+        response = PingdomRequest(self, 'checks?limit=%s&offset=%s' % (limit, offset)).fetch()
         result = response.content
         
         pingdom_checks = []
@@ -172,9 +174,13 @@ class PingdomConnection(object):
         return pingdom_check
 
     
-    def get_raw_check_results(self, check_id, limit):
+    def get_raw_check_results(self, check_id, limit=100, **kwargs):
         """Get raw check results for a specific Pingdom check by ID and limit"""
-        response = PingdomRequest(self, 'results/%s?limit=%s' %(check_id,limit)).fetch()
+        endtime = int(kwargs("timeto", time.time()))
+        starttime = int(kwargs.get("timefrom", endtime - 86400))
+        limit = int(kwargs("limit", limit))
+        offset = int(kwargs("offset", 0))
+        response = PingdomRequest(self, 'results/%s?limit=%s&offset=%s&to=%s&from=%s' %(check_id,limit,offset,endtime,starttime)).fetch()
         return response.content['results']
 
     def create_check(self, name, host, check_type, **kwargs):
@@ -213,9 +219,11 @@ class PingdomConnection(object):
         return response.content
 
 
-    def get_all_contacts(self):
+    def get_all_contacts(self, **kwargs):
         """Get a list of Pingdom contacts"""
-        response = PingdomRequest(self, 'contacts').fetch()
+        limit = int(kwargs.get("limit", 100))
+        offset = int(kwargs.get("offset", 0))
+        response = PingdomRequest(self, 'contacts?limit=%s&offset=%s').fetch()
         result = response.content
 
         contacts = [PingdomContact(r) for r in result['contacts']]
