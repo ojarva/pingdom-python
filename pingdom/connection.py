@@ -21,6 +21,7 @@ import StringIO
 import sys
 import urllib
 import urllib2
+import time
 
 try:
     import json
@@ -147,6 +148,22 @@ class PingdomConnection(object):
             
         return pingdom_checks
     
+    def get_alerts(self, **kwargs):
+        """ Get actions (alerts). Optional keyword arguments "timefrom" and "timeto" are unix timestamps for specifying time range. "limit" is maximum number of returned elements and "offset" is offset for listing (for paging, for example). """
+        starttime = int(kwargs.get("timefrom", 0))
+        endtime = int(kwargs.get("timeto", time.time()))
+        limit = int(kwargs.get("limit", 100))
+        offset = int(kwargs.get("offset", 0))
+        response = PingdomRequest(self, 'actions/?from=%s&to=%s&limit=%s&offset=%s' % (starttime, endtime, limit, offset)).fetch()
+        return response.content["actions"]
+
+    def get_check_averages(self, checkid, **kwargs):
+        """ Get average of response time & uptime. Additional keyword arguments "timefrom" and "timeto" are unix timestamps for specifying time range. """
+        starttime = int(kwargs.get("timefrom", 0))
+        endtime = int(kwargs.get("timeto", time.time()))
+        response = PingdomRequest(self, 'summary.average/%s/?includeuptime=true&bycountry=true&from=%s&to=%s' % (checkid, starttime, endtime)).fetch()
+        return response.content
+
     
     def get_check(self, check_id):
         """Get a Pingdom check by ID"""
