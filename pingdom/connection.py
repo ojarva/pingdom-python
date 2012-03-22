@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import base64
-import datetime
 import gzip
 import logging
 import StringIO
