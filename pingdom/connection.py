@@ -14,13 +14,13 @@
 # limitations under the License.
 
 import base64
-import datetime
 import gzip
 import logging
 import StringIO
 import sys
 import urllib
 import urllib2
+import time
 
 try:
     import json
@@ -133,9 +133,11 @@ class PingdomConnection(object):
         return check_list
         
         
-    def get_all_checks(self, check_names=None):
+    def get_all_checks(self, check_names=None, **kwargs):
         """Get a list of Pingdom checks, optionally filtered by check name"""
-        response = PingdomRequest(self, 'checks').fetch()
+        limit = int(kwargs.get("limit", 25000))
+        offset = int(kwargs.get("offset", 0))
+        response = PingdomRequest(self, 'checks?limit=%s&offset=%s' % (limit, offset)).fetch()
         result = response.content
         
         pingdom_checks = []
@@ -147,6 +149,22 @@ class PingdomConnection(object):
             
         return pingdom_checks
     
+    def get_alerts(self, **kwargs):
+        """ Get actions (alerts). Optional keyword arguments "timefrom" and "timeto" are unix timestamps for specifying time range. "limit" is maximum number of returned elements and "offset" is offset for listing (for paging, for example). """
+        starttime = int(kwargs.get("timefrom", 0))
+        endtime = int(kwargs.get("timeto", time.time()))
+        limit = int(kwargs.get("limit", 100))
+        offset = int(kwargs.get("offset", 0))
+        response = PingdomRequest(self, 'actions/?from=%s&to=%s&limit=%s&offset=%s' % (starttime, endtime, limit, offset)).fetch()
+        return response.content["actions"]
+
+    def get_check_averages(self, checkid, **kwargs):
+        """ Get average of response time & uptime. Additional keyword arguments "timefrom" and "timeto" are unix timestamps for specifying time range. """
+        starttime = int(kwargs.get("timefrom", 0))
+        endtime = int(kwargs.get("timeto", time.time()))
+        response = PingdomRequest(self, 'summary.average/%s/?includeuptime=true&bycountry=true&from=%s&to=%s' % (checkid, starttime, endtime)).fetch()
+        return response.content
+
     
     def get_check(self, check_id):
         """Get a Pingdom check by ID"""
@@ -155,9 +173,13 @@ class PingdomConnection(object):
         return pingdom_check
 
     
-    def get_raw_check_results(self, check_id, limit):
+    def get_raw_check_results(self, check_id, limit=100, **kwargs):
         """Get raw check results for a specific Pingdom check by ID and limit"""
-        response = PingdomRequest(self, 'results/%s?limit=%s' %(check_id,limit)).fetch()
+        endtime = int(kwargs("timeto", time.time()))
+        starttime = int(kwargs.get("timefrom", endtime - 86400))
+        limit = int(kwargs("limit", limit))
+        offset = int(kwargs("offset", 0))
+        response = PingdomRequest(self, 'results/%s?limit=%s&offset=%s&to=%s&from=%s' %(check_id,limit,offset,endtime,starttime)).fetch()
         return response.content['results']
 
     def create_check(self, name, host, check_type, **kwargs):
@@ -196,9 +218,11 @@ class PingdomConnection(object):
         return response.content
 
 
-    def get_all_contacts(self):
+    def get_all_contacts(self, **kwargs):
         """Get a list of Pingdom contacts"""
-        response = PingdomRequest(self, 'contacts').fetch()
+        limit = int(kwargs.get("limit", 100))
+        offset = int(kwargs.get("offset", 0))
+        response = PingdomRequest(self, 'contacts?limit=%s&offset=%s').fetch()
         result = response.content
 
         contacts = [PingdomContact(r) for r in result['contacts']]
