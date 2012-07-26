@@ -175,10 +175,10 @@ class PingdomConnection(object):
     
     def get_raw_check_results(self, check_id, limit=100, **kwargs):
         """Get raw check results for a specific Pingdom check by ID and limit"""
-        endtime = int(kwargs("timeto", time.time()))
+        endtime = int(kwargs.get("timeto", time.time()))
         starttime = int(kwargs.get("timefrom", endtime - 86400))
-        limit = int(kwargs("limit", limit))
-        offset = int(kwargs("offset", 0))
+        limit = int(kwargs.get("limit", limit))
+        offset = int(kwargs.get("offset", 0))
         response = PingdomRequest(self, 'results/%s?limit=%s&offset=%s&to=%s&from=%s' %(check_id,limit,offset,endtime,starttime)).fetch()
         return response.content['results']
 
