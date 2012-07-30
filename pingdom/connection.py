@@ -232,3 +232,16 @@ class PingdomConnection(object):
         """Get a list of Pingdom actions/alerts"""
         response = PingdomRequest(self, 'actions/?limit=%s' % limit).fetch()
         return response.content
+
+    def get_outage_summary(self, check, timefrom=None, timeto=None, order=None):
+        """Get a list of Pingdom actions/alerts"""
+        query = []
+        if timefrom:
+            query.append(('from', urllib.quote(str(timefrom))))
+        if timeto:
+            query.append(('to', urllib.quote(str(timeto))))
+        if order:
+            query.append(('order', urllib.quote(str(order))))
+        query = '&'.join(['%s=%s' % (k,v) for k,v in query])
+        response = PingdomRequest(self, 'summary.outage/%s?%s' % (check.id, query)).fetch()
+        return response.content['summary']['states']
