@@ -60,3 +60,24 @@ Delete a Pingdom check:
 
     >>> c.delete_check(302632)
     {u'message': u'Deletion of check was successful!'}
+
+Get a list of Pingdom contacts:
+    >>> contacts = c.get_all_contacts()
+    >>> contacts
+    [Contact:Glenn Snyder]
+    >>> contacts[0].name
+    u'Glenn Snyder'
+
+Create a Pingdom contact:
+    >>> c.create_contact('elaine', email='elaine@nowhere.com')
+    Contact:elaine
+
+Modify a Pingdom contact:
+    >>> c.modify_contact(576686, email='elaine@somewhere.com')
+    u'Modification of contact was successful!'
+
+Delete a Pingdom contact:
+    >>> c.delete_contact(576686)
+    {u'message': u'Deletion of contact was successful!'}
+
+
