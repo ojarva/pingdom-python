@@ -182,7 +182,6 @@ class PingdomConnection(object):
         return response.content['results']
 
     def get_servertime(self):
-        #http://www.pingdom.com/services/api-documentation-rest
         """Get server time"""
         response = PingdomRequest(self, 'servertime').fetch()
         return response.content['servertime']
