@@ -30,7 +30,3 @@ from pingdom.connection import (PingdomRequest, PingdomResponse,
                                  PingdomConnection)
 from pingdom.exception import PingdomError
 from pingdom.resources import PingdomCheck, PingdomContact
-
-
-
-

@@ -174,10 +174,10 @@ class PingdomConnection(object):
 
     def get_raw_check_results(self, check_id, from_time=0, limit=100, **kwargs):
         """Get raw check results for a specific Pingdom check by ID and limit"""
-        endtime = int(kwargs("timeto", time.time()))
-        starttime = int(kwargs.get("timefrom", from_time))
-        limit = int(kwargs("limit", limit))
-        offset = int(kwargs("offset", 0))
+        endtime = int(kwargs.get("timeto", time.time()))
+        starttime = int(kwargs.get("timefrom", endtime - 86400))
+        limit = int(kwargs.get("limit", limit))
+        offset = int(kwargs.get("offset", 0))
         response = PingdomRequest(self, 'results/%s?limit=%s&offset=%s&to=%s&from=%s' %(check_id,limit,offset,endtime,starttime)).fetch()
         return response.content['results']
 
@@ -285,3 +285,16 @@ class PingdomConnection(object):
         """Get a list of Pingdom actions/alerts"""
         response = PingdomRequest(self, 'actions/?limit=%s' % limit).fetch()
         return response.content
+
+    def get_outage_summary(self, check, timefrom=None, timeto=None, order=None):
+        """Get a list of Pingdom actions/alerts"""
+        query = []
+        if timefrom:
+            query.append(('from', urllib.quote(str(timefrom))))
+        if timeto:
+            query.append(('to', urllib.quote(str(timeto))))
+        if order:
+            query.append(('order', urllib.quote(str(order))))
+        query = '&'.join(['%s=%s' % (k,v) for k,v in query])
+        response = PingdomRequest(self, 'summary.outage/%s?%s' % (check.id, query)).fetch()
+        return response.content['summary']['states']
