@@ -227,6 +227,40 @@ class PingdomConnection(object):
         contacts = [PingdomContact(r) for r in result['contacts']]
         return contacts
 
+    def create_contact(self, name, **kwargs):
+        """Create a new Pingdom contact."""
+        post_data = {'name': name}
+        for key in kwargs:
+            post_data[key] = kwargs[key]
+
+        try:
+            resp = PingdomRequest(self, 'contacts', post_data=post_data).fetch()
+        except PingdomError, e:
+            logging.error(e)
+        else:
+            return PingdomContact(resp.content['contact'])
+
+    def modify_contact(self, contact_id, **kwargs):
+        """Modify a Pingdom contact by ID"""
+        post_data = {}
+        for key in kwargs:
+            post_data[key] = kwargs[key]
+
+        try:
+            rs = 'contacts/%s' % contact_id
+            response = PingdomRequest(self, rs, post_data=post_data,
+                method='PUT').fetch()
+        except PingdomError, e:
+            logging.error(e)
+        else:
+            return response.content['message']
+
+    def delete_contact(self, contact_id):
+        """Delete a Pingdom contact."""
+        rs = 'contacts/%s' % contact_id
+        response = PingdomRequest(self, rs, method='DELETE').fetch()
+        return response.content
+
     def get_summary_average(self, check_id, from_time=0, to_time=0,
                             include_uptime='true'):
         """Get a summarized response time / uptime value
