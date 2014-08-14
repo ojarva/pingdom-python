@@ -72,6 +72,9 @@ class PingdomRequest(urllib2.Request):
         if connection.apikey:
             self.add_header("App-Key", connection.apikey)
 
+        if connection.account_email:
+            self.add-header("Account-Email", connection.account_email)
+
         # Enable gzip
         if enable_gzip:
             self.add_header('Accept-Encoding', 'gzip')
@@ -115,13 +118,15 @@ class PingdomResponse(object):
 
 
 class PingdomConnection(object):
-    def __init__(self, username, password, apikey = '', base_url='https://api.pingdom.com/api/2.0'):
+    def __init__(self, username, password, apikey = '',
+            base_url='https://api.pingdom.com/api/2.0', account_email=None):
         """Interface to the Pingdom API."""
 
         self.username = username
         self.password = password
         self.apikey = apikey
         self.base_url = base_url
+        self.account_email = account_email
 
 
     def __repr__(self):
