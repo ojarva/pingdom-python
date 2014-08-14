@@ -73,7 +73,7 @@ class PingdomRequest(urllib2.Request):
             self.add_header("App-Key", connection.apikey)
 
         if connection.account_email:
-            self.add-header("Account-Email", connection.account_email)
+            self.add_header("Account-Email", connection.account_email)
 
         # Enable gzip
         if enable_gzip:
