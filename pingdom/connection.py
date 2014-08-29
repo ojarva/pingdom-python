@@ -1,43 +1,45 @@
-# Author: Mike Babineau <mikeb@ea2d.com>
-# Copyright 2011 Electronic Arts Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# -*- coding: utf-8 -*-
+"""
 
-import base64
-import gzip
-import logging
-import StringIO
-import sys
-import urllib
-import urllib2
+    pingdom.connection
+
+"""
 import time
-
-try:
-    import json
-except:
-    import simplejson as json
+import logging
+import requests
+from requests.auth import HTTPBasicAuth
 
 from pingdom.resources import PingdomCheck
 from pingdom.resources import PingdomContact
 from pingdom.exception import PingdomError, PingdomHTTPError
 
+BASE_URL = 'https://api.pingdom.com/api/'
+BASE_VERSION = '2.0'
+log = logging.getLogger(__name__)
 
-class PingdomRequest(urllib2.Request):
-    def __init__(self, connection, resource, post_data=None, method=None, enable_gzip=True):
+
+class PingdomRequest(object):
+
+    def _method(self, method, post_data):
+        """ Returns a method used on Request
+
+            defaults to `post` if post_data, `get` otherwise
+        """
+        if post_data:
+            if not method:
+                method = 'post'
+        else:
+            if not method:
+                method = 'get'
+        return method.lower()
+
+    def __init__(self, connection, resource, post_data=None, method=None,
+                 enable_gzip=True):
         """Representation of a Pingdom API HTTP request.
 
         :type connection: :class:`PingdomConnection`
-        :param connection: Pingdom connection object populated with a username, password and base URL
+        :param connection: Pingdom connection object populated with a username,
+            password and base URL
 
         :type resource: string
         :param resource: Pingdom resource to query (in all lowercase)
@@ -46,80 +48,54 @@ class PingdomRequest(urllib2.Request):
         :param post_data: Data to be sent with a POST request
 
         :type method: string
-        :param method: HTTP verb (GET, POST, DELETE, etc.) to use (defaults to GET or POST, depending on the presence of post_data)
+        :param method: HTTP verb (GET, POST, DELETE, etc.) to use (defaults to
+            GET or POST, depending on the presence of post_data)
 
         :type enable_gzip: bool
-        :param enable_gzip: Whether or not to gzip the request (thus telling Pingdom to gzip the response)
+        :param enable_gzip: Whether or not to gzip the request (thus telling
+            Pingdom to gzip the response)
         """
-        url = connection.base_url + '/' + resource
-
-        if post_data:
-            if not method: method = 'POST'
-            data = urllib.urlencode(post_data)
-            urllib2.Request.__init__(self, url, data)
-        else:
-            if not method: method = 'GET'
-            urllib2.Request.__init__(self, url)
-
-        # Trick to support DELETE, PUT, etc.
-        if method not in ['GET', 'POST']:
-            self.get_method = lambda: '%s' % method
-
-        # Add auth header
-        base64string = base64.encodestring('%s:%s' % (connection.username, connection.password)).replace('\n','')
-        self.add_header("Authorization", "Basic %s" % base64string)
-
-        if connection.apikey:
-            self.add_header("App-Key", connection.apikey)
-
+        self.url = connection.base_url + '/' + resource
+        self.post_data = post_data
+        self.method = self._method(method, post_data)
+        self.auth = HTTPBasicAuth(connection.username, connection.password)
+        self.headers = {'App-Key': connection.apikey}
         if connection.account_email:
-            self.add_header("Account-Email", connection.account_email)
-
-        # Enable gzip
-        if enable_gzip:
-            self.add_header('Accept-Encoding', 'gzip')
-
+            self.headers["Account-Email"]=connection.account_email
 
     def __repr__(self):
-        return 'PingdomRequest: %s %s' % (self.get_method(), self.get_full_url())
-
+        return 'PingdomRequest:\n\t{0!r}\n\t{1!r}\n\t{2!r}' % \
+               (self.url, self.method, self.auth)
 
     def fetch(self):
         """Execute the request."""
         try:
-            response = urllib2.urlopen(self)
-        except urllib2.HTTPError, e:
-            raise PingdomHTTPError(e)
-        except urllib2.URLError, e:
+            msg = "`url`={0!r}\n`data`={1!r}".format(self.url, self.post_data)
+            log.debug(msg)
+            response = getattr(requests, self.method)(url=self.url,
+                data=self.post_data, auth=self.auth, headers=self.headers)
+        except requests.exceptions.RequestException, e:
             raise PingdomError(e)
-        else:
-            return PingdomResponse(response)
-
+        return PingdomResponse(response)
 
 
 class PingdomResponse(object):
     def __init__(self, response):
         """Representation of a Pingdom API HTTP response."""
-        if response.headers.get('content-encoding') == 'gzip':
-            self.data = gzip.GzipFile(fileobj=StringIO.StringIO(response.read())).read()
-        else:
-            self.data = response.read()
 
         self.headers = response.headers
-        self.content = json.loads(self.data)
+        self.content = response.json()
 
-        if 'error' in self.content:
-            raise PingdomError(self.content)
-
+        if response.status_code >= 300:
+            raise PingdomError(response)
 
     def __repr__(self):
         return 'PingdomResponse: %s' % self.content.keys()
 
 
-
 class PingdomConnection(object):
-    def __init__(self, username, password, apikey = '',
-            base_url='https://api.pingdom.com/api/2.0', account_email=None):
+    def __init__(self, username, password, apikey='',
+                 base_url=BASE_URL + BASE_VERSION, account_email=None):
         """Interface to the Pingdom API."""
 
         self.username = username
@@ -131,7 +107,6 @@ class PingdomConnection(object):
 
     def __repr__(self):
         return "Connection:%s" % self.base_url
-
 
     def list_checks(self):
         """List all Pingdom check names"""
@@ -150,7 +125,8 @@ class PingdomConnection(object):
         pingdom_checks = []
         if check_names:
             for check_name in check_names:
-                pingdom_checks += [PingdomCheck(r) for r in result['checks'] if r['name'] == check_name]
+                pingdom_checks += [PingdomCheck(r) for r in result['checks']
+                                   if r['name'] == check_name]
         else:
             pingdom_checks += [PingdomCheck(r) for r in result['checks']]
 
@@ -172,13 +148,11 @@ class PingdomConnection(object):
         response = PingdomRequest(self, 'summary.average/%s/?includeuptime=true&bycountry=true&from=%s&to=%s' % (checkid, starttime, endtime)).fetch()
         return response.content
 
-
     def get_check(self, check_id):
         """Get a Pingdom check by ID"""
         response = PingdomRequest(self, 'checks/%s' % check_id).fetch()
         pingdom_check = PingdomCheck(response.content['check'])
         return pingdom_check
-
 
     def get_raw_check_results(self, check_id, limit=100, **kwargs):
         """Get raw check results for a specific Pingdom check by ID and limit"""
@@ -198,12 +172,11 @@ class PingdomConnection(object):
             post_data[key] = kwargs[key]
 
         try:
-            response = PingdomRequest(self, 'checks', post_data=post_data).fetch()
+            resp = PingdomRequest(self, 'checks', post_data=post_data).fetch()
         except PingdomError, e:
             logging.error(e)
         else:
-            return PingdomCheck(response.content['check'])
-
+            return PingdomCheck(resp.content['check'])
 
     def modify_check(self, check_id, **kwargs):
         """Modify a Pingdom check by ID"""
@@ -212,18 +185,19 @@ class PingdomConnection(object):
             post_data[key] = kwargs[key]
 
         try:
-            response = PingdomRequest(self, 'checks/%s' % check_id, post_data=post_data, method='PUT').fetch()
+            rs = 'checks/%s' % check_id
+            response = PingdomRequest(self, rs, post_data=post_data,
+                method='PUT').fetch()
         except PingdomError, e:
             logging.error(e)
         else:
             return response.content['message']
 
-
     def delete_check(self, check_id):
         """Delete a Pingdom check by ID"""
-        response = PingdomRequest(self, 'checks/%s' % check_id, method='DELETE').fetch()
+        rs = 'checks/%s' % check_id
+        response = PingdomRequest(self, rs, method='DELETE').fetch()
         return response.content
-
 
     def get_all_contacts(self, **kwargs):
         """Get a list of Pingdom contacts"""
@@ -235,6 +209,15 @@ class PingdomConnection(object):
         contacts = [PingdomContact(r) for r in result['contacts']]
         return contacts
 
+    def get_summary_average(self, check_id, from_time=0, to_time=0,
+                            include_uptime='true'):
+        """Get a summarized response time / uptime value
+            for a specified check and time period."""
+        rs = 'summary.average/%s?from=%s&to=%s&includeuptime=%s' % \
+           (check_id, from_time, to_time, include_uptime)
+        response = PingdomRequest(self, rs).fetch()
+        return response.content['summary']
+        
     def get_actions(self, limit):
         """Get a list of Pingdom actions/alerts"""
         response = PingdomRequest(self, 'actions/?limit=%s' % limit).fetch()
