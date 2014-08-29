@@ -63,16 +63,14 @@ class PingdomRequest(object):
         self.headers = {'App-Key': connection.apikey}
         if connection.account_email:
             self.headers["Account-Email"] = connection.account_email
+        self.session = connection.session
 
-        self.session = None
 
     def __repr__(self):
         return 'PingdomRequest:\n\t{0!r}\n\t{1!r}\n\t{2!r}'.format(self.url, self.method, self.auth)
 
     def fetch(self):
         """Execute the request."""
-        if self.session is None:
-            self.session = requests.Session()
         try:
             msg = "`url`={0!r}\n`data`={1!r}".format(self.url, self.post_data)
             log.debug(msg)
@@ -107,6 +105,7 @@ class PingdomConnection(object):
         self.apikey = apikey
         self.base_url = base_url
         self.account_email = account_email
+        self.session = requests.Session()
 
 
     def __repr__(self):
