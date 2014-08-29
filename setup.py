@@ -7,7 +7,7 @@ if sys.version_info >= (3,):
     extra['use_2to3'] = True
 
 setup(name='pingdom',
-      version="0.2.1",
+      version="0.2.1-2",
       description='Pingdom Library',
       long_description="""3rd-party Python interface to Pingdom's REST API.""",
       author='Mike Babineau',
