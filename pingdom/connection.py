@@ -5,6 +5,7 @@
 
 """
 import time
+import urllib
 import logging
 import requests
 from requests.auth import HTTPBasicAuth
@@ -61,18 +62,21 @@ class PingdomRequest(object):
         self.auth = HTTPBasicAuth(connection.username, connection.password)
         self.headers = {'App-Key': connection.apikey}
         if connection.account_email:
-            self.headers["Account-Email"]=connection.account_email
+            self.headers["Account-Email"] = connection.account_email
+
+        self.session = None
 
     def __repr__(self):
-        return 'PingdomRequest:\n\t{0!r}\n\t{1!r}\n\t{2!r}' % \
-               (self.url, self.method, self.auth)
+        return 'PingdomRequest:\n\t{0!r}\n\t{1!r}\n\t{2!r}'.format(self.url, self.method, self.auth)
 
     def fetch(self):
         """Execute the request."""
+        if self.session is None:
+            self.session = requests.Session()
         try:
             msg = "`url`={0!r}\n`data`={1!r}".format(self.url, self.post_data)
             log.debug(msg)
-            response = getattr(requests, self.method)(url=self.url,
+            response = getattr(self.session, self.method)(url=self.url,
                 data=self.post_data, auth=self.auth, headers=self.headers)
         except requests.exceptions.RequestException, e:
             raise PingdomError(e)
