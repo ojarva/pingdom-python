@@ -28,6 +28,9 @@ try:
 except:
     import simplejson as json
 
+import StringIO
+import urllib2
+import gzip
 import logging
 log = logging.getLogger(__name__)
 
@@ -48,3 +51,24 @@ class PingdomError(Exception):
 
     def __str__(self):
         return self.__repr__()
+
+class PingdomHTTPError(PingdomError, urllib2.HTTPError):
+    def __init__(self, http_error):
+        urllib2.HTTPError.__init__(self, http_error.filename, http_error.code, http_error.msg, http_error.hdrs, http_error.fp)
+
+        if self.headers.get('content-encoding') == 'gzip':
+            data = gzip.GzipFile(fileobj=StringIO.StringIO(http_error.read())).read()
+        else:
+            data = self.read()
+
+        j = json.loads(data)
+        error = j['error']
+        self.statuscode = error['statuscode']
+        self.statusdesc = error['statusdesc']
+        self.errormessage = error['errormessage']
+
+    def __repr__(self):
+        return 'PingdomError: HTTP %s %s returned with message, "%s"' % (self.statuscode, self.statusdesc, self.errormessage)
+
+
+

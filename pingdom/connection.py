@@ -81,25 +81,21 @@ class PingdomRequest(object):
         self.post_data = post_data
         self.method = self._method(method, post_data)
         self.auth = HTTPBasicAuth(connection.username, connection.password)
-        self.headers = {'App-Key': connection.apikey,
-                        'Account‑Email': connection.account_email
-                        }
+        self.headers = {'App-Key': connection.apikey}
+        if connection.account_email:
+            self.headers["Account-Email"] = connection.account_email
+        self.session = connection.session
 
-        # TODO ensure this still works
-#        # Enable gzip
-#        if enable_gzip:
-#            self.add_header('Accept-Encoding', 'gzip')
 
     def __repr__(self):
-        return 'PingdomRequest:\n\t{0!r}\n\t{1!r}\n\t{2!r}' % \
-               (self.url, self.method, self.auth)
+        return 'PingdomRequest:\n\t{0!r}\n\t{1!r}\n\t{2!r}'.format(self.url, self.method, self.auth)
 
     def fetch(self):
         """Execute the request."""
         try:
             msg = "`url`={0!r}\n`data`={1!r}".format(self.url, self.post_data)
             log.debug(msg)
-            response = getattr(requests, self.method)(url=self.url,
+            response = getattr(self.session, self.method)(url=self.url,
                 data=self.post_data, auth=self.auth, headers=self.headers)
         except requests.exceptions.RequestException, e:
             raise PingdomError(e)
@@ -122,7 +118,7 @@ class PingdomResponse(object):
 
 class PingdomConnection(object):
     def __init__(self, username, password, apikey='',
-                 base_url=BASE_URL + BASE_VERSION, account_email=''):
+                 base_url=BASE_URL + BASE_VERSION, account_email=None):
         """Interface to the Pingdom API."""
 
         self.username = username
@@ -130,6 +126,8 @@ class PingdomConnection(object):
         self.apikey = apikey
         self.base_url = base_url
         self.account_email = account_email
+        self.session = requests.Session()
+
 
     def __repr__(self):
         return "Connection:%s" % self.base_url
@@ -156,8 +154,7 @@ class PingdomConnection(object):
                 pingdom_checks += [PingdomCheck(r) for r in result['checks']
                                    if r['name'] == check_name]
         else:
-            pingdom_checks += [PingdomCheck(r) for r in result['checks']
-                                if r['name'] not in check_excludes]
+            pingdom_checks += [PingdomCheck(r) for r in result['checks']]
 
         return pingdom_checks
 
@@ -183,13 +180,13 @@ class PingdomConnection(object):
         pingdom_check = PingdomCheck(response.content['check'])
         return pingdom_check
 
-    def get_raw_check_results(self, check_id, from_time=0, limit=100, **kwargs):
+    def get_raw_check_results(self, check_id, limit=100, **kwargs):
         """Get raw check results for a specific Pingdom check by ID and limit"""
         endtime = int(kwargs.get("timeto", time.time()))
         starttime = int(kwargs.get("timefrom", endtime - 86400))
         limit = int(kwargs.get("limit", limit))
         offset = int(kwargs.get("offset", 0))
-        response = PingdomRequest(self, 'results/%s?limit=%s&offset=%s&to=%s&from=%s' %(check_id,limit,offset,endtime,starttime)).fetch()
+        response = PingdomRequest(self, 'results/%s?limit=%s&offset=%s&to=%s&from=%s' % (check_id, limit, offset, endtime, starttime)).fetch()
         return response.content['results']
 
     def get_servertime(self):
