@@ -73,7 +73,9 @@ class PingdomRequest(object):
         self.post_data = post_data
         self.method = self._method(method, post_data)
         self.auth = HTTPBasicAuth(connection.username, connection.password)
-        self.headers = {'App-Key': connection.apikey}
+        self.headers = {'App-Key': connection.apikey,
+                        'Account‑Email': connection.account_email
+                        }
 
         # TODO ensure this still works
 #        # Enable gzip
@@ -112,13 +114,14 @@ class PingdomResponse(object):
 
 class PingdomConnection(object):
     def __init__(self, username, password, apikey='',
-                 base_url=BASE_URL + BASE_VERSION):
+                 base_url=BASE_URL + BASE_VERSION, account_email=''):
         """Interface to the Pingdom API."""
 
         self.username = username
         self.password = password
         self.apikey = apikey
         self.base_url = base_url
+        self.account_email = account_email
 
     def __repr__(self):
         return "Connection:%s" % self.base_url
