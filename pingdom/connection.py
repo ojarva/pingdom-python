@@ -1,9 +1,17 @@
-# -*- coding: utf-8 -*-
-"""
-
-    pingdom.connection
-
-"""
+# Author: Mike Babineau <mikeb@ea2d.com>
+# Copyright 2011 Electronic Arts Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import base64
 import gzip
@@ -25,7 +33,7 @@ from requests.auth import HTTPBasicAuth
 
 from pingdom.resources import PingdomCheck
 from pingdom.resources import PingdomContact
-from pingdom.exception import PingdomError
+from pingdom.exception import PingdomError, PingdomHTTPError
 
 BASE_URL = 'https://api.pingdom.com/api/'
 BASE_VERSION = '2.0'
@@ -152,7 +160,7 @@ class PingdomConnection(object):
                                 if r['name'] not in check_excludes]
 
         return pingdom_checks
-    
+
     def get_alerts(self, **kwargs):
         """ Get actions (alerts). Optional keyword arguments "timefrom" and "timeto" are unix timestamps for specifying time range. "limit" is maximum number of returned elements and "offset" is offset for listing (for paging, for example). """
         starttime = int(kwargs.get("timefrom", 0))
@@ -283,7 +291,7 @@ class PingdomConnection(object):
            (check_id, from_time, to_time, include_uptime)
         response = PingdomRequest(self, rs).fetch()
         return response.content['summary']
-        
+
     def get_actions(self, limit):
         """Get a list of Pingdom actions/alerts"""
         response = PingdomRequest(self, 'actions/?limit=%s' % limit).fetch()

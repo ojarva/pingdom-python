@@ -67,6 +67,22 @@ Get a list of Pingdom contacts:
     [Contact:Glenn Snyder]
     >>> contacts[0].name
     u'Glenn Snyder'
+Get list of actions (alerts):
+
+    >>> c.get_alerts()
+    {u'alerts': [{u'checkid': 522359, u'status': u'sent', u'via': u'email', u'sentto': u'...
+    >>> import time
+    >>> c.get_alerts(timefrom=time.time()-86400)
+    # Only alerts for last 24 hours
+
+Get check averages:
+
+    >>> import time
+    >>> c.get_check_averages(522359, from=time.time()-86400)
+    {u'summary': {u'status': {u'totalup': 86400, u'totalunknown': 0, u'totaldown': 0}, u'responsetime': {u'to': 1332413845, u'from': 1332327445, u'avgresponse': [{u'countryiso': u'US', u'avgresponse': 864}, {u'countryiso': u'DE', u'avgresponse': 254}, {u'countryiso': u'AT', u'avgresponse': 391}, {u'countryiso': u'FR', u'avgresponse': 184}, {u'countryiso': u'GB', u'avgresponse': 194}]}}}
+
+By default Pingdom calculates statistics from unix epoch (1970-01-01), so it is good idea to provide "from" keyword.
+
 
 Create a Pingdom contact:
     >>> c.create_contact('elaine', email='elaine@nowhere.com')
